@@ -8,38 +8,36 @@
  #include <Encoder.h>
  #include <EEPROMex.h>
  #include <SolarPosition.h>
- 
 
  //   SOLAR position
- SolarPosition my_position (49.551805, 20.566461); // naszacowice
+   SolarPosition my_position (49.551805, 20.566461); // naszacowice
 
  //#define ENCODER_DO_NOT_USE_INTERRUPTS
  
- const byte ONEWIRE_PIN = 2;
- byte sensorAddress[8] = {0x28, 0xFF, 0x4B, 0x1A, 0x2, 0x17, 0x3, 0xDD};         //Sensor Adress
- OneWire onewire(ONEWIRE_PIN);           // 1-Wire object
- DS18B20 sensors(&onewire);              // DS18B20 sensors object
+  const byte ONEWIRE_PIN = 2;
+  byte sensorAddress[8] = {0x28, 0xFF, 0x4B, 0x1A, 0x2, 0x17, 0x3, 0xDD};         //Sensor Adress
+  OneWire onewire(ONEWIRE_PIN);           // 1-Wire object
+  DS18B20 sensors(&onewire);              // DS18B20 sensors object
  
  //    Clock Configuration
  //DS1307 rtc;
-tmElements_t tm;
-
+  tmElements_t tm;
 
   //    LCD Configuration
- const int rs = 12, en = 9, d4 = 11, d5 = 8, d6 = 10, d7 = 7;
- LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+  const int rs = 12, en = 9, d4 = 11, d5 = 8, d6 = 10, d7 = 7;
+  LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
   //    Servo Config
 
- #define relay_1 A1
- #define relay_2 A2                         
- #define motor 6
- #define power A3
- #define potentiometer A0
- const  int brake = 5;
- const int brake_speed = 150;
- const int speed = 150;
- const int servo_histereza = 7; 
+  #define relay_1 A1
+  #define relay_2 A2                         
+  #define motor 6
+  #define power A3
+  #define potentiometer A0
+  const  int brake = 5;
+  const int brake_speed = 150;
+  const int speed = 150;
+  const int servo_histereza = 7; 
 
   //    Button 
 
@@ -68,7 +66,7 @@ tmElements_t tm;
   int old_setPos = 0;
   int eep_array=10;
   byte steps_num = 0;
-  byte timePosArray[35][3];
+  uint16_t timePosArray[35][3];
 
   int old_sec = 0;
   int debug = 0;
@@ -78,14 +76,15 @@ tmElements_t tm;
   int automatic_mode = 0;
   int old_automatic_mode = 0;
 
-  byte work_mode = 1;       // data of work mode 0 stop, 1 time table, 2 full_auto
+  byte work_mode = 6;       // data of work mode 0 stop, 1 time table, 2 full_auto
   int azimuth_min = 0; 
   int azimuth_max = 0;
   int servo_min = 0;
   int servo_max = 0;
 
   int addressInt;
-  const int memBase = 350;
+  const int memBase = 10;
+  const int maxAllowedWrites = 80;
 
 void setup() {
  Serial.begin(115200);
@@ -93,7 +92,7 @@ void setup() {
  lcd.begin(20, 4);                         
 
   //only set the date+time one time
- //rtc.set(0, 15, 22, 23, 07, 2019); //sec, min, hour, day, month, year
+  //rtc.set(0, 15, 22, 23, 07, 2019); //sec, min, hour, day, month, year
   //rtc.start();
   setSyncProvider(RTC.get);   // the function to get the time from the RTC
   if(timeStatus()!= timeSet) 
@@ -105,36 +104,46 @@ void setup() {
 
   sensors.begin();
  
- pinMode(LED_BUILTIN, OUTPUT);
- pinMode(potentiometer, INPUT);
- pinMode(3, INPUT);
- pinMode(4, INPUT);
- //pinMode(sw, INPUT);
- pinMode(button, INPUT);
- pinMode(relay_1, OUTPUT);
- pinMode(relay_2, OUTPUT);
- pinMode(power, OUTPUT);
- pinMode(motor, OUTPUT);
- 
- digitalWrite(LED_BUILTIN,1);
- digitalWrite(relay_1,1);
- digitalWrite(relay_2,1);
+  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(potentiometer, INPUT);
+  pinMode(3, INPUT);
+  pinMode(4, INPUT);
+  //pinMode(sw, INPUT);
+  pinMode(button, INPUT);
+  pinMode(relay_1, OUTPUT);
+  pinMode(relay_2, OUTPUT);
+  pinMode(power, OUTPUT);
+  pinMode(motor, OUTPUT);
+  
+  digitalWrite(LED_BUILTIN,1);
+  digitalWrite(relay_1,1);
+  digitalWrite(relay_2,1);
+
+
 
 
 //*********************EEPROM READ HANDLER****************
- EEPROM.setMemPool(memBase, EEPROMSizeUno);
- 
+
+ EEPROM.setMemPool(memBase, 1024);
+
   addressInt = EEPROM.getAddress(sizeof(int));
-  Serial.print(addressInt);       Serial.print(" \t\t "); Serial.print(sizeof(int));  Serial.println(" (int)");
+ 
+  
+  EEPROM.setMaxAllowedWrites(1024);
+  delay(100);
+  Serial.print("addresInt: ");
+  Serial.println(addressInt);
 
+  int eep_position=addressInt;
+  
+  //for(int i=0; i<1024;i++){
+  //EEPROM.write(i,0);
+  //}
 
-
- int eep_position=0;
-
- for(int i=0; i<25;i++){
+ for(int i=0; i<35;i++){
    for(int j=0;j<3;j++){
     timePosArray[i][j] = EEPROM.readInt(eep_position);
-    eep_position++;
+    eep_position=eep_position+2;
     lcd.clear();
     lcd.setCursor(5, 0);
     lcd.print("EEPROM READ");
@@ -158,8 +167,83 @@ void setup() {
   azimuth_max = timePosArray[19][1];
   servo_min = timePosArray[19][2];
   servo_max = timePosArray[19][3];
+  
 }
 
+/**************************************************TABLE_HANDLER************************************************/
+
+void table_write()
+{
+ 
+  int eep_pos=addressInt;
+  Serial.print("addresInt: ");
+  Serial.println(addressInt);
+
+  for (int row = 0;row < 35;row++){
+    for (int column = 0;column < 3;column++)
+    {   
+      int write = timePosArray[row][column];
+      EEPROM.writeInt(eep_pos, write);  
+      eep_pos=eep_pos+2;
+      Serial.print(eep_pos);
+      Serial.print(" ");
+    }
+    Serial.println();
+  }
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("EEPROM SAVED");
+  delay(1500);
+}
+//**********************************************TABLE_MODE^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
+int table_mode() 
+{ 
+  int tableTimePosArray[35][3];
+  int eep_position = 120;
+  for(int i=0; i<20;i++){
+   for(int j=0;j<3;j++){
+    tableTimePosArray[i][j] = EEPROM.readInt(eep_position);
+    eep_position++;
+   }
+  }
+  int now_min = minute();
+  int now_hour = hour();
+  int timeToProces = (now_hour * 100) + now_min;
+  int oldtable_convert_time =  1000;
+  int result = 0;
+  //Serial.println("TABLE HANDLER");
+  //Serial.print("Time to process: ");
+  //Serial.println(timeToProces);
+
+  for (int i = 0; i<18; i++){
+
+     
+      int table_convert_time = (tableTimePosArray[i][1] * 100) + timePosArray[i][2];
+      //Serial.print(table_convert_time);
+      
+      table_convert_time = timeToProces - table_convert_time;
+      table_convert_time = abs (table_convert_time);
+      //Serial.print(" ");
+      //Serial.print(table_convert_time);
+      //Serial.print(" ");
+      //Serial.println(timePosArray[i][0]);
+      if (tableTimePosArray[i][0] == 0 and tableTimePosArray[i][1] == 0 and timePosArray[i][2] == 0){
+      i = 19;
+      }
+      if (table_convert_time < oldtable_convert_time) {
+        result = tableTimePosArray[i][0];
+        oldtable_convert_time = table_convert_time;
+      }
+
+      
+   
+  }
+  result = result;
+  //Serial.print("result: ");
+  //Serial.println(result);
+  return result;
+
+}
 
 
 /********************************************MOTOR SPIN*******************************************************/
@@ -340,71 +424,6 @@ void lcd_refresh (int potValue, float temp, long encoderValue, long azimuth, int
 
 }
 
-
-/**************************************************TABLE_HANDLER************************************************/
-
-void table_write()
-{
-
-  int eep_pos = 0;
-  for (int row = 0;row < 25;row++){
-    for (int column = 0;column < 3;column++)
-    {   
-      EEPROM.writeInt(eep_pos, timePosArray[row][column]);  
-      eep_pos++;
-
-    }
-
-  }
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("EEPROM SAVED");
-  delay(1500);
-}
-//**********************************************TABLE_MODE^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
-int table_mode() 
-{ 
-  
-  int now_min = minute();
-  int now_hour = hour();
-  int timeToProces = (now_hour * 100) + now_min;
-  int oldtable_convert_time =  1000;
-  int result = 0;
-  Serial.println("TABLE HANDLER");
-  Serial.print("Time to process: ");
-  Serial.println(timeToProces);
-
-  for (int i = 0; i<18; i++){
-
-     
-      int table_convert_time = (timePosArray[i][1] * 100) + timePosArray[i][2];
-      Serial.print(table_convert_time);
-      
-      table_convert_time = timeToProces - table_convert_time;
-      table_convert_time = abs (table_convert_time);
-      Serial.print(" ");
-      Serial.print(table_convert_time);
-      Serial.print(" ");
-      Serial.println(timePosArray[i][0]);
-      if (timePosArray[i][0] == 0 and timePosArray[i][1] == 0 and timePosArray[i][2] == 0){
-      i = 19;
-      }
-      if (table_convert_time < oldtable_convert_time) {
-        result = timePosArray[i][0];
-        oldtable_convert_time = table_convert_time;
-      }
-
-      
-   
-  }
-  result = result;
-  Serial.print("result: ");
-  Serial.println(result);
-  return result;
-
-}
-
-
 /*****************************************************   MENU   ************************************************************/
 
 void menu() {
@@ -488,7 +507,6 @@ void menu() {
     lklik=0;
     if (menu_count == 0){
       new_sec=second(), new_min=minute(), new_hour=hour();
-      int position = analogRead(potentiometer); 
       int step = 0;
       lcd.clear();
       lcd.setCursor(1, 0);
@@ -763,11 +781,11 @@ void menu() {
             if (new_time < 0) {new_time = 0;}
 
             if (sel == 0) {
-              if (new_time > 255){new_time = 255;}
+              if (new_time > 1000){new_time = 1000;}
               servo_min = new_time;
               }
             if (sel == 1) {
-              if (new_time < 745){new_time = 745;}
+              if (new_time < 500){new_time = 500;}
               if (new_time > 1000){new_time = 1000;}
               servo_max = new_time;
               }
@@ -776,7 +794,7 @@ void menu() {
               azimuth_min = new_time;
               }
             if (sel == 3) {
-              if (new_time > 410){new_time = 410;}
+              if (new_time > 510){new_time = 510;}
               if (new_time < 155){new_time = 155;}
               azimuth_max  = new_time;
               }
