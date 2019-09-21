@@ -76,7 +76,7 @@
   int automatic_mode = 0;
   int old_automatic_mode = 0;
 
-  byte work_mode = 6;       // data of work mode 0 stop, 1 time table, 2 full_auto
+  int work_mode = 1;       // data of work mode 0 stop, 1 time table, 2 full_auto
   int azimuth_min = 0; 
   int azimuth_max = 0;
   int servo_min = 0;
@@ -162,12 +162,12 @@ void setup() {
 
  
 
-  //work_mode = timePosArray[21][0];       // data of work mode 0 stop, 1 time table, 2 full_auto
-  azimuth_min = timePosArray[19][0]; 
-  azimuth_max = timePosArray[19][1];
-  servo_min = timePosArray[19][2];
-  servo_max = timePosArray[19][3];
   
+  azimuth_min = timePosArray[33][0]; 
+  azimuth_max = timePosArray[33][1];
+  servo_min = timePosArray[33][2];
+  servo_max = timePosArray[34][0];
+  work_mode = timePosArray[34][1];       // data of work mode 0 stop, 1 time table, 2 full_auto
 }
 
 /**************************************************TABLE_HANDLER************************************************/
@@ -198,11 +198,11 @@ void table_write()
 //**********************************************TABLE_MODE^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 int table_mode() 
 { 
-  int tableTimePosArray[35][3];
+  int tableTimePosArray[30][3];
   int eep_position = 120;
-  for(int i=0; i<20;i++){
+  for(int i=0; i<30;i++){
    for(int j=0;j<3;j++){
-    tableTimePosArray[i][j] = EEPROM.readInt(eep_position);
+    tableTimePosArray[i][j] = timePosArray[i][j];
     eep_position++;
    }
   }
@@ -434,6 +434,8 @@ void menu() {
   lcd.print("TEMP");
   lcd.setCursor(2, 1);
   lcd.print("SET TIME");
+  lcd.setCursor(15, 1);
+  lcd.print("MODE");
   lcd.setCursor(2, 2);
   lcd.print("MAN. MODE");
   lcd.setCursor(2, 3);
@@ -458,7 +460,7 @@ void menu() {
       if ( encoder > old_encoder) {menu_count++; old_encoder = encoder;}
       if ( encoder < old_encoder) {menu_count--; old_encoder = encoder;}
         if ( menu_count < 0) {menu_count = 0;}
-        if ( menu_count > 4) {menu_count = 4;}
+        if ( menu_count > 5) {menu_count = 5;}
 
         lcd.clear();      
         lcd.setCursor(2, 0);
@@ -467,6 +469,8 @@ void menu() {
         lcd.print("TEMP");
         lcd.setCursor(2, 1);
         lcd.print("SET TIME");
+        lcd.setCursor(15, 1);
+        lcd.print("MODE");
         lcd.setCursor(2, 2);
         lcd.print("MAN. MODE");
         lcd.setCursor(2, 3);
@@ -496,6 +500,11 @@ void menu() {
 
             case 4:
               lcd.setCursor(13,0);
+              lcd.print(">");
+            break;
+
+            case 5:
+              lcd.setCursor(13,1);
               lcd.print(">");
             break;
           }
@@ -823,10 +832,10 @@ void menu() {
             
         }
 
-      timePosArray[19][0] = azimuth_min;
-      timePosArray[19][1] = azimuth_max;
-      timePosArray[19][2] = servo_min;
-      timePosArray[19][3] = servo_max;
+      timePosArray[33][0] = azimuth_min;
+      timePosArray[33][1] = azimuth_max;
+      timePosArray[33][2] = servo_min;
+      timePosArray[34][0] = servo_max;
       table_write();
 
   }
@@ -841,6 +850,69 @@ void menu() {
 
 
   }
+
+  if (menu_count == 5){     
+      int work_menu = timePosArray[34][1];
+      lcd.clear();
+      lcd.setCursor(1, 0);
+      lcd.print("Work mode: ");
+      lcd.print(work_menu);
+      lcd.setCursor(2, 0);
+      switch (work_menu){
+        case 0:
+          lcd.print("STOP");
+        break;
+        case 1:
+          lcd.print("TIME TABLE");
+        break;
+        case 2:
+          lcd.print("AUTO");
+        break;
+      }
+      while (lklik==0) {
+          klik=0;
+          lklik=0;
+          button_check();
+          encoder = myEnc.read();
+          
+          if (encoder != old_encoder or klik == 1){
+            klik=0;
+            if ( encoder > old_encoder) {work_menu=work_menu+1; old_encoder = encoder;}
+            if ( encoder < old_encoder) {work_menu=work_menu-1; old_encoder = encoder;}
+            if ( work_menu < 0) { work_menu = 0;}
+            if ( work_menu > 2) { work_menu = 2;}
+              
+            lcd.clear();
+            lcd.setCursor(1, 0);
+            lcd.print("Work mode: ");
+            lcd.print(work_menu);
+            lcd.setCursor(0, 2);
+            switch (work_menu){
+              case 0:
+              lcd.print("STOP");
+              break;
+              case 1:
+              lcd.print("TIME TABLE");
+              break;
+              case 2:
+              lcd.print("AUTO");
+              break;
+            }
+            
+                
+          }
+              
+            
+        }
+
+   
+      timePosArray[34][1] = work_menu;
+      work_mode = work_menu;
+      table_write();
+
+  }
+
+  
   klik=0;
   lklik=0;
 }
@@ -862,7 +934,7 @@ void loop() {
   if (work_mode == 1){
 
     work_table = table_mode();
-    work_table = map(work_table, 0, 1024, servo_min, servo_max);
+    //work_table = map(work_table, 0, 1024, servo_min, servo_max);
     if (work_table != position);
     motor_spin(work_table);
 
@@ -879,7 +951,7 @@ void loop() {
         automatic_mode = servo_max;
       }
       //if difrent spin motor
-      if (automatic_mode != old_automatic_mode){
+      if (automatic_mode != position){
         motor_spin(automatic_mode);
         old_automatic_mode = automatic_mode;
       }

@@ -1,0 +1,9 @@
+{
+    "terminal.integrated.env.linux": {
+        "PATH": "/home/cnc/.platformio/penv/bin:/home/cnc/.platformio/penv:/home/cnc/.local/bin:/home/cnc/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+        "PLATFORMIO_CALLER": "vscode"
+    },
+    "githubPullRequests.remotes": [
+        "origin"
+    ]
+}
