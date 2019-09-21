@@ -131,8 +131,6 @@ void setup() {
   
   EEPROM.setMaxAllowedWrites(1024);
   delay(100);
-  Serial.print("addresInt: ");
-  Serial.println(addressInt);
 
   int eep_position=addressInt;
   
@@ -151,18 +149,12 @@ void setup() {
     lcd.print(eep_position);
     lcd.setCursor(9, 3);
     lcd.print(timePosArray[i][j]);
-    Serial.print(timePosArray[i][j]);
-    Serial.print(" ");    
     }
-    Serial.println(" ");
+
     delay(10);
- 
 
-   }
+  }
 
- 
-
-  
   azimuth_min = timePosArray[33][0]; 
   azimuth_max = timePosArray[33][1];
   servo_min = timePosArray[33][2];
@@ -176,8 +168,6 @@ void table_write()
 {
  
   int eep_pos=addressInt;
-  Serial.print("addresInt: ");
-  Serial.println(addressInt);
 
   for (int row = 0;row < 35;row++){
     for (int column = 0;column < 3;column++)
@@ -185,10 +175,7 @@ void table_write()
       int write = timePosArray[row][column];
       EEPROM.writeInt(eep_pos, write);  
       eep_pos=eep_pos+2;
-      Serial.print(eep_pos);
-      Serial.print(" ");
     }
-    Serial.println();
   }
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -211,22 +198,16 @@ int table_mode()
   int timeToProces = (now_hour * 100) + now_min;
   int oldtable_convert_time =  1000;
   int result = 0;
-  //Serial.println("TABLE HANDLER");
-  //Serial.print("Time to process: ");
-  //Serial.println(timeToProces);
 
   for (int i = 0; i<18; i++){
 
      
       int table_convert_time = (tableTimePosArray[i][1] * 100) + timePosArray[i][2];
-      //Serial.print(table_convert_time);
+
       
       table_convert_time = timeToProces - table_convert_time;
       table_convert_time = abs (table_convert_time);
-      //Serial.print(" ");
-      //Serial.print(table_convert_time);
-      //Serial.print(" ");
-      //Serial.println(timePosArray[i][0]);
+
       if (tableTimePosArray[i][0] == 0 and tableTimePosArray[i][1] == 0 and timePosArray[i][2] == 0){
       i = 19;
       }
@@ -239,8 +220,6 @@ int table_mode()
    
   }
   result = result;
-  //Serial.print("result: ");
-  //Serial.println(result);
   return result;
 
 }
@@ -258,8 +237,6 @@ void motor_spin(int demandPosition){
     pot = analogRead(potentiometer);
     int histereza = demandPosition - pot;
     histereza = abs (histereza);
-    Serial.print("histereza: ");
-    Serial.print(histereza);
   if (histereza >= servo_histereza){
     boolean dir = 0;
     work = 1;
