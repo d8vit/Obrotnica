@@ -181,7 +181,7 @@ void table_write()
     for (int column = 0;column < 3;column++)
     {   
       int write = timePosArray[row][column];
-      EEPROM.writeInt(eep_pos, write);  
+      EEPROM.updateInt(eep_pos, write);  
       eep_pos=eep_pos+2;
     }
   }
