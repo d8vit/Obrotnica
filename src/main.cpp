@@ -34,10 +34,10 @@
   #define motor 6
   #define power A3
   #define potentiometer A0
-  const  int brake = 5;
-  const int brake_speed = 150;
-  const int speed = 150;
-  const int servo_histereza = 7; 
+  int brake = 0;
+  int brake_speed = 0;
+  int speed = 0;
+  int servo_histereza = 0; 
 
   //    Button 
 
@@ -154,12 +154,16 @@ void setup() {
     delay(10);
 
   }
-
+  speed = timePosArray[32][2];
+  brake =timePosArray[31][2];
+  brake_speed = timePosArray [32][1];
+  servo_histereza = timePosArray [32][0];
   azimuth_min = timePosArray[33][0]; 
   azimuth_max = timePosArray[33][1];
   servo_min = timePosArray[33][2];
   servo_max = timePosArray[34][0];
   work_mode = timePosArray[34][1];       // data of work mode 0 stop, 1 time table, 2 full_auto
+
 }
 
 /**************************************************TABLE_HANDLER************************************************/
@@ -437,7 +441,7 @@ void menu() {
       if ( encoder > old_encoder) {menu_count++; old_encoder = encoder;}
       if ( encoder < old_encoder) {menu_count--; old_encoder = encoder;}
         if ( menu_count < 0) {menu_count = 0;}
-        if ( menu_count > 5) {menu_count = 5;}
+        if ( menu_count > 6) {menu_count = 6;}
 
         lcd.clear();      
         lcd.setCursor(2, 0);
@@ -450,6 +454,8 @@ void menu() {
         lcd.print("MODE");
         lcd.setCursor(2, 2);
         lcd.print("MAN. MODE");
+        lcd.setCursor(15, 2);
+        lcd.print("SERVO");
         lcd.setCursor(2, 3);
         lcd.print("ADVENCED"); 
         
@@ -482,6 +488,11 @@ void menu() {
 
             case 5:
               lcd.setCursor(13,1);
+              lcd.print(">");
+            break;
+
+            case 6:
+              lcd.setCursor(13,2);
               lcd.print(">");
             break;
           }
@@ -574,6 +585,7 @@ void menu() {
       }
       
     } 
+
     if (menu_count == 1){
       new_sec=second(), new_min=minute(), new_hour=hour(), new_day=day(), new_month=month(), new_year=year();        
       lcd.clear();
@@ -737,7 +749,7 @@ void menu() {
       lcd.print(azimuth_max);
       
       int new_time=0;
-      byte sel=0;  
+      int sel=0;  
 
       while (lklik==0) {
           klik=0;
@@ -804,17 +816,16 @@ void menu() {
             if (sel == 2) {lcd.setCursor(0, 2); lcd.print(">");}
             if (sel == 3) {lcd.setCursor(0, 3); lcd.print(">");}
                 
-          }
+        }
               
             
-        }
+      }
 
-      timePosArray[33][0] = azimuth_min;
-      timePosArray[33][1] = azimuth_max;
-      timePosArray[33][2] = servo_min;
-      timePosArray[34][0] = servo_max;
-      table_write();
-
+    timePosArray[33][0] = azimuth_min;
+    timePosArray[33][1] = azimuth_max;
+    timePosArray[33][2] = servo_min;
+    timePosArray[34][0] = servo_max;
+    table_write();
   }
 
   if (menu_count == 4){
@@ -824,8 +835,6 @@ void menu() {
       lcd.setCursor(11, 1);
       lcd.print("give a varible idiot");
       delay(5600);
-
-
   }
 
   if (menu_count == 5){     
@@ -886,9 +895,101 @@ void menu() {
       timePosArray[34][1] = work_menu;
       work_mode = work_menu;
       table_write();
+  }
+ 
+
+  if (menu_count == 6){     
+      int servo_power = timePosArray[34][1];
+      lcd.clear();
+      lcd.setCursor(1, 0);
+      lcd.print("Speed: ");
+      lcd.print(speed);
+      lcd.setCursor(1, 1);
+      lcd.print("Brake S: ");
+      lcd.print(brake_speed);
+      lcd.setCursor(1, 2);
+      lcd.print("Hist: ");
+      lcd.print(servo_histereza);
+      lcd.setCursor(1, 3);
+      lcd.print("Brake D: ");
+      lcd.print(brake);
+
+      int new_time=0;
+      int sel=0;  
+      while (lklik==0) {
+          klik=0;
+          lklik=0;
+          button_check();
+          encoder = myEnc.read();
+          if (klik == 1) {sel++;}
+          if(sel >=4) {sel=0;}
+
+          if (sel == 0) {
+            new_time=speed;
+            }
+          if (sel == 1) {
+            new_time=brake_speed;
+            }
+          if (sel == 2) {
+            new_time=servo_histereza;
+            }
+          if (sel == 3) {
+            new_time=brake;
+            }
+          
+          if (encoder != old_encoder or klik == 1){
+            klik=0;
+            if ( encoder > old_encoder) {new_time=new_time+1; old_encoder = encoder;}
+            if ( encoder < old_encoder) {new_time=new_time-1; old_encoder = encoder;}
+            if (new_time < 0) {new_time = 0;}
+
+            if (sel == 0) {
+              if (new_time > 255){new_time = 255;}
+              speed = new_time;
+              }
+            if (sel == 1) {
+              if (new_time > 255){new_time = 255;}
+              brake_speed = new_time;
+              }
+            if (sel == 2) {
+              if (new_time > 25){new_time = 25;}
+              servo_histereza = new_time;
+              }
+            if (sel == 3) {
+              if (new_time > 50){new_time = 50;}
+              brake  = new_time;
+              }
+      
+            lcd.clear();
+            lcd.setCursor(1, 0);
+            lcd.print("Speed: ");
+            lcd.print(speed);
+            lcd.setCursor(1, 1);
+            lcd.print("Brake S: ");
+            lcd.print(brake_speed);
+            lcd.setCursor(1, 2);
+            lcd.print("Hist: ");
+            lcd.print(servo_histereza);
+            lcd.setCursor(1, 3);
+            lcd.print("Brake D: ");
+            lcd.print(brake);
+
+            if (sel == 0) {lcd.setCursor(0, 0); lcd.print(">");}
+            if (sel == 1) {lcd.setCursor(0, 1); lcd.print(">");}
+            if (sel == 2) {lcd.setCursor(0, 2); lcd.print(">");}
+            if (sel == 3) {lcd.setCursor(0, 3); lcd.print(">");}
+                
+        }
+              
+            
+      }
+      timePosArray[32][2] = speed;
+      timePosArray[32][1] = brake_speed;
+      timePosArray[32][0] = servo_histereza;
+      timePosArray[31][2] = brake;
+      table_write();
 
   }
-
   
   klik=0;
   lklik=0;
