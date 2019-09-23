@@ -62,6 +62,8 @@
 
   //    Variables
 
+  int temp = 0;
+  boolean temp_flag = 0;
   int setPos = 0;
   int old_setPos = 0;
   int eep_array=10;
@@ -75,8 +77,9 @@
 
   int automatic_mode = 0;
   int old_automatic_mode = 0;
+  int old_work_mode = 0;
 
-  int work_mode = 1;       // data of work mode 0 stop, 1 time table, 2 full_auto
+  int work_mode = 0;       // data of work mode 0 stop, 1 time table, 2 full_auto
   int azimuth_min = 0; 
   int azimuth_max = 0;
   int servo_min = 0;
@@ -154,6 +157,7 @@ void setup() {
     delay(10);
 
   }
+  temp = timePosArray[31][1];
   speed = timePosArray[32][2];
   brake =timePosArray[31][2];
   brake_speed = timePosArray [32][1];
@@ -356,7 +360,7 @@ if (digitalRead(button) == LOW) {
 
 /****************************************************LCD_REFRESH**********************************/
 
-void lcd_refresh (int potValue, float temp, long encoderValue, long azimuth, int tpos){
+void lcd_refresh (int potValue, float temp, long encoderValue, long azimuth, int elevation, int tpos){
 
   refresh_counter++;
   if (refresh_counter == 100){
@@ -368,8 +372,7 @@ void lcd_refresh (int potValue, float temp, long encoderValue, long azimuth, int
   // Get time
   // Print LCD data
   lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("T:");
+  lcd.setCursor(1, 0);
   lcd.print(hour(), DEC);
   lcd.print(":");
   lcd.print(minute(), DEC);
@@ -378,12 +381,11 @@ void lcd_refresh (int potValue, float temp, long encoderValue, long azimuth, int
   lcd.setCursor(13,0);
   lcd.print(temp);
   lcd.print(" C");
+
   lcd.setCursor(0,1);
   lcd.print("Servo: ");
   lcd.print(potValue);
-  lcd.setCursor(11,1);
-  lcd.print("Tp: ");
-  lcd.print(tpos);
+
   lcd.setCursor(0, 2);
   lcd.print("MODE: ");
 
@@ -400,15 +402,18 @@ void lcd_refresh (int potValue, float temp, long encoderValue, long azimuth, int
   }
 
   lcd.setCursor(0, 3);
-  lcd.print("AZIMUTH: ");
+  lcd.print("AZ: ");
   lcd.print(azimuth);
+  lcd.setCursor(12,3);
+  lcd.print("EL: ");
+  lcd.print(elevation);
 
 }
 
 /*****************************************************   MENU   ************************************************************/
 
 void menu() {
-  lcd.clear();
+  lcd.clear();      
   lcd.setCursor(2, 0);
   lcd.print("SET STEPS");
   lcd.setCursor(15, 0);
@@ -419,9 +424,10 @@ void menu() {
   lcd.print("MODE");
   lcd.setCursor(2, 2);
   lcd.print("MAN. MODE");
+  lcd.setCursor(15, 2);
+  lcd.print("SERVO");
   lcd.setCursor(2, 3);
   lcd.print("ADVENCED"); 
-  lcd.setCursor(0, 0);
   lcd.print(">");
   encoder = myEnc.read();
   long old_encoder = encoder;
@@ -505,35 +511,39 @@ void menu() {
     if (menu_count == 0){
       new_sec=second(), new_min=minute(), new_hour=hour();
       int step = 0;
-      lcd.clear();
-      lcd.setCursor(1, 0);
-      lcd.print("WORK SCHEDULE");
-      lcd.setCursor(3, 1);
-      lcd.print("STEP: ");
-      lcd.print(step);
-      lcd.setCursor(2, 2);
-      lcd.print("POSITION: ");
-      lcd.print(timePosArray[step][0], DEC);
-      lcd.setCursor(2, 3);
-      lcd.print("TIME: ");
-      lcd.print(new_hour, DEC);
-      lcd.print(":");
-      lcd.print(new_min, DEC);
       int new_time=0;
-      byte sel=0;  
+      int sel=0;  
       klik=0;
       lklik=0;
+
+      lcd.clear();
+      lcd.setCursor(3, 0);
+      lcd.print("WORK SCHEDULE");
+      lcd.setCursor(2, 1);
+      lcd.print("STEP: ");
+      lcd.print(step, DEC);
+      lcd.setCursor(2, 2);
+      lcd.print("POS : ");
+      lcd.print(timePosArray[step][0], DEC);
+      lcd.setCursor(2, 3);
+      lcd.print("TIME:  ");
+      lcd.print(timePosArray[step][1], DEC);
+      lcd.print(":");
+      lcd.print(timePosArray[step][2], DEC);
+      lcd.setCursor(0, 1);
+      lcd.print(">");
+
       while (lklik==0) {
           
           button_check();
           encoder = myEnc.read();
           if (klik == 1) {sel++;}
-          if(sel >=5) {sel=0;}
+          if(sel >=6) {sel=0;}
 
           if (sel == 0) {new_time=step;}
           if (sel == 1) {new_time=timePosArray[step][0];}
-          if (sel == 2) {new_time=timePosArray[step][1];}
-          if (sel == 3) {new_time=timePosArray[step][2];}
+          if (sel == 3) {new_time=timePosArray[step][1];}
+          if (sel == 4) {new_time=timePosArray[step][2];}
 
           if (encoder != old_encoder or klik == 1){
             klik=0;
@@ -542,20 +552,22 @@ void menu() {
             if (new_time < 0) {new_time = 0;}
 
             if (sel == 0) {
-              if (new_time > 35){new_time = 35;}
+              if (new_time > 30){new_time = 30;}
               step=new_time;
               }
             if (sel == 1) {
               if (new_time > 1000){new_time = 1000;}
-              timePosArray[step][0]=new_time;}
-            if (sel == 2) {
+              timePosArray[step][0]=new_time;
+              }
+            if (sel == 3) {
               if (new_time > 23){new_time = 23;}
               timePosArray[step][1]=new_time;
             }
-            if (sel == 3) {
+            if (sel == 4) {
               if (new_time > 59){new_time = 59;}
               timePosArray[step][2]=new_time;
-            }   
+            } 
+
             lcd.clear();
             lcd.setCursor(3, 0);
             lcd.print("WORK SCHEDULE");
@@ -571,15 +583,35 @@ void menu() {
             lcd.print(":");
             lcd.print(timePosArray[step][2], DEC);
 
+
+            if (sel == 2) {
+              motor_spin(timePosArray[step][0]);
+              lcd.clear();
+              lcd.setCursor(3, 0);
+              lcd.print("WORK SCHEDULE");
+              lcd.setCursor(2, 1);
+              lcd.print("STEP: ");
+              lcd.print(step, DEC);
+              lcd.setCursor(2, 2);
+              lcd.print("POS : ");
+              lcd.print(timePosArray[step][0], DEC);
+              lcd.setCursor(2, 3);
+              lcd.print("TIME:  ");
+              lcd.print(timePosArray[step][1], DEC);
+              lcd.print(":");
+              lcd.print(timePosArray[step][2], DEC);
+              sel = 3;
+              }
+
             if (sel == 0) {lcd.setCursor(0, 1); lcd.print(">");}
             if (sel == 1) {lcd.setCursor(0, 2); lcd.print(">");}
-            if (sel == 2) {lcd.setCursor(0, 3); lcd.print(">"); lcd.setCursor(8, 3); lcd.print(">");}
-            if (sel == 3) {lcd.setCursor(0, 3); lcd.print(">"); lcd.setCursor(14, 3); lcd.print("<");}
-            if (sel == 4) {lcd.setCursor(13, 1); lcd.print("save");}    
+            if (sel == 3) {lcd.setCursor(0, 3); lcd.print(">"); lcd.setCursor(8, 3); lcd.print(">");}
+            if (sel == 4) {lcd.setCursor(0, 3); lcd.print(">"); lcd.setCursor(14, 3); lcd.print("<");}
+            if (sel == 5) {lcd.setCursor(13, 1); lcd.print("save");}    
           }
       }
 
-      if (sel == 4){
+      if (sel == 5){
         
         table_write(); 
       }
@@ -603,6 +635,8 @@ void menu() {
       lcd.print(new_month, DEC);
       lcd.print("-");
       lcd.print(new_year, DEC);
+      lcd.setCursor(6, 1); 
+      lcd.print("^");
       int new_time=0;
       byte sel=0;      
       while (lklik==0) {
@@ -747,7 +781,9 @@ void menu() {
       lcd.setCursor(1, 3);
       lcd.print("Az_max: ");
       lcd.print(azimuth_max);
-      
+      lcd.setCursor(0, 0); 
+      lcd.print(">");
+
       int new_time=0;
       int sel=0;  
 
@@ -830,28 +866,47 @@ void menu() {
 
   if (menu_count == 4){
       lcd.clear();
-      lcd.setCursor(1, 1);
+      lcd.setCursor(5, 0);
       lcd.print("MAX TEMP:");
-      lcd.setCursor(11, 1);
-      lcd.print("give a varible idiot");
-      delay(5600);
+      lcd.setCursor(8, 2);
+      lcd.print(temp, DEC);
+      lcd.print(" C");
+
+      while (lklik == 0) {
+        button_check();
+        encoder = myEnc.read();
+        if (encoder != old_encoder){
+          if ( encoder > old_encoder) {temp=temp+1; old_encoder = encoder;}
+          if ( encoder < old_encoder) {temp=temp-1; old_encoder = encoder;} 
+          lcd.setCursor(8, 3);
+          lcd.print(temp, DEC);
+          lcd.print(" C");
+        }        
+      }
+
+      timePosArray[31][1] = temp;
+      table_write();
+
   }
 
-  if (menu_count == 5){     
+  if (menu_count == 5){
+
       int work_menu = timePosArray[34][1];
       lcd.clear();
-      lcd.setCursor(1, 0);
+      lcd.setCursor(5, 0);
       lcd.print("Work mode: ");
-      lcd.print(work_menu);
-      lcd.setCursor(2, 0);
+      
       switch (work_menu){
         case 0:
+        lcd.setCursor(8, 2);
           lcd.print("STOP");
         break;
         case 1:
+          lcd.setCursor(5, 2);
           lcd.print("TIME TABLE");
         break;
         case 2:
+          lcd.setCursor(8, 2);
           lcd.print("AUTO");
         break;
       }
@@ -869,37 +924,36 @@ void menu() {
             if ( work_menu > 2) { work_menu = 2;}
               
             lcd.clear();
-            lcd.setCursor(1, 0);
+            lcd.setCursor(5, 0);
             lcd.print("Work mode: ");
-            lcd.print(work_menu);
-            lcd.setCursor(0, 2);
+      
             switch (work_menu){
               case 0:
+              lcd.setCursor(8, 2);
               lcd.print("STOP");
-              break;
-              case 1:
+            break;
+            case 1:
+              lcd.setCursor(5, 2);
               lcd.print("TIME TABLE");
-              break;
-              case 2:
+            break;
+            case 2:
+              lcd.setCursor(8, 2);
               lcd.print("AUTO");
-              break;
+            break;
             }
             
                 
-          }
-              
+          }       
             
-        }
-
-   
-      timePosArray[34][1] = work_menu;
-      work_mode = work_menu;
-      table_write();
-  }
+      }
+    timePosArray[34][1] = work_menu;
+    work_mode = work_menu;
+    table_write();
+  } 
  
 
   if (menu_count == 6){     
-      int servo_power = timePosArray[34][1];
+
       lcd.clear();
       lcd.setCursor(1, 0);
       lcd.print("Speed: ");
@@ -1001,13 +1055,49 @@ void loop() {
   
   SolarPosition_t pos = my_position.getSolarPosition();
   int azimuth = pos.azimuth;
+  int elewati = pos.elevation;
 
   int work_table = table_mode();
+
+  // Read potentiometer position 10 samples
   int position = 0; 
   for (int i=0; i <= 9; i++){
      position =+ analogRead(potentiometer);
    }
    position = position / 10;
+
+  // Requests sensor for measurement
+  sensors.request(sensorAddress);
+  // Waiting (block the program) for measurement reesults
+  while(!sensors.available());
+  
+  // Reads the temperature from sensor
+  temperature = sensors.readTemperature(sensorAddress);
+
+  
+
+  float math_temp = temp;
+  
+
+  if (temperature >= math_temp){
+
+    Serial.println (math_temp);
+    Serial.println (temperature);
+
+    work_mode = 0;
+
+    int now_hour = hour();
+    if (now_hour < 13 ) {
+      motor_spin(servo_max);
+    }
+    else if (now_hour >= 13) {
+      motor_spin(servo_min);
+    }
+  }
+
+  if (temperature < math_temp and work_mode != timePosArray[34][1]) {
+    work_mode = timePosArray[34][1];
+  }
 
   if (work_mode == 1){
 
@@ -1035,21 +1125,13 @@ void loop() {
       }
   }
   
-   // Requests sensor for measurement
-  sensors.request(sensorAddress);
-  // Waiting (block the program) for measurement reesults
-  while(!sensors.available());
   
-  // Reads the temperature from sensor
-  temperature = sensors.readTemperature(sensorAddress);
-
-  // Calculate azimuth
   
   // Reads encoder
   encoder = myEnc.read();
 
   if (old_sec != second()){
-    lcd_refresh(pot, temperature, encoder, azimuth, work_table);
+    lcd_refresh(pot, temperature, encoder, azimuth, elewati, work_table);
     old_sec = second();
   }
 
