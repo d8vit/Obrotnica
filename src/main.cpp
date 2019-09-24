@@ -70,7 +70,7 @@
   int old_setPos = 0;
   int eep_array=10;
   int steps_num = 0;
-  uint16_t timePosArray[35][3];
+  int timePosArray[35][3];
 
   int old_sec = 0;
   int debug = 0;
@@ -82,6 +82,8 @@
   int old_work_mode = 0;
 
   int work_mode = 0;       // data of work mode 0 stop, 1 time table, 2 full_auto
+  int temp_hist = 0;
+  int escape_direction = 0;
   int transition_hour = 0;
   int azimuth_min = 0; 
   int azimuth_max = 0;
@@ -99,16 +101,16 @@ void setup() {
  lcd.begin(20, 4);                         
 // the function to get the time from the RTC
   setSyncProvider(RTC.get);   
-  if(timeStatus()!= timeSet) 
+  if(timeStatus()!= timeSet) {
      lcd.clear();
      lcd.setCursor(0,0);
      lcd.print("Unable to sync with the RTC");
      delay(2500);
-  else
-      lcd.clear();
-     lcd.setCursor(0,0);
-     lcd.print("RTC has set the system time");
-     delay(2500);     
+     }
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("RTC has set the system time");
+  delay(250);     
   
   SolarPosition::setTimeProvider(RTC.get);
 
@@ -158,7 +160,7 @@ void setup() {
     }
     delay(10);
   }
-  
+  temp_hist = timePosArray[30][2];
   transition_hour = timePosArray[31][0];
   temp = timePosArray[31][1];
   speed = timePosArray[32][2];
@@ -170,6 +172,7 @@ void setup() {
   servo_min = timePosArray[33][2];
   servo_max = timePosArray[34][0];
   work_mode = timePosArray[34][1];       // data of work mode 0 stop, 1 time table, 2 full_auto
+  escape_direction = timePosArray[34][2];
 
 }
 
@@ -876,7 +879,23 @@ void menu() {
       lcd.setCursor(1, 1);
       lcd.print("TRANS.HOUR: ");
       lcd.print(transition_hour);
-      
+      lcd.setCursor(1, 2);
+      lcd.print("ESCAPE DIR: ");
+
+        if (escape_direction == 0){
+          lcd.print("NORMAL");
+        }
+
+        if (escape_direction == 1){
+          lcd.print("REVERSE");
+        }
+
+      lcd.setCursor(1, 3);
+      lcd.print("HISTERESIS: ");
+      lcd.print(temp_hist);
+      lcd.print(" C");
+
+
       int new_time=0;
       int sel=0; 
 
@@ -895,62 +914,90 @@ void menu() {
             new_time=transition_hour;
             }
           if (sel == 2) {
-            new_time=azimuth_min;
+            new_time=escape_direction;
             }
           if (sel == 3) {
-            new_time=azimuth_max;
+            new_time=temp_hist;
             }
           
           if (encoder != old_encoder or klik == 1){
             klik=0;
-            if ( encoder > old_encoder) {new_time=new_time+1; old_encoder = encoder;}
-            if ( encoder < old_encoder) {new_time=new_time-1; old_encoder = encoder;}
-            if (new_time < 0) {new_time = 0;}
+
+            if ( encoder > old_encoder) {
+              new_time=new_time+1; 
+              old_encoder = encoder;
+            }
+
+            if ( encoder < old_encoder) {
+              new_time=new_time-1; 
+              old_encoder = encoder;
+            }
+            if (new_time < 0) {
+              new_time = 0;
+            }
 
             if (sel == 0) {
-              if (new_time > 1000){new_time = 1000;}
-              servo_min = new_time;
+              if (new_time > 95){
+                new_time = 95;
               }
+              temp = new_time;
+            }
             if (sel == 1) {
-              if (new_time < 500){new_time = 500;}
-              if (new_time > 1000){new_time = 1000;}
-              servo_max = new_time;
+              if (new_time > 24){
+                new_time = 24;
               }
+              transition_hour = new_time;
+            }
             if (sel == 2) {
-              if (new_time > 255){new_time = 255;}
-              azimuth_min = new_time;
+              if (new_time > 1){
+                new_time = 1;
               }
+              escape_direction = new_time;
+            }
             if (sel == 3) {
-              if (new_time > 510){new_time = 510;}
-              if (new_time < 155){new_time = 155;}
-              azimuth_max  = new_time;
+              if (new_time > 25){
+                new_time = 25;
               }
+              temp_hist  = new_time;
+            }
       
-            lcd.clear();
-            lcd.setCursor(1, 0);
-            lcd.print("Servo_min: ");
-            lcd.print(servo_min);
-            lcd.setCursor(1, 1);
-            lcd.print("Servo_max: ");
-            lcd.print(servo_max);
-            lcd.setCursor(1, 2);
-            lcd.print("Az_min: ");
-            lcd.print(azimuth_min);
-            lcd.setCursor(1, 3);
-            lcd.print("Az_max: ");
-            lcd.print(azimuth_max);
+          lcd.clear();
+          lcd.setCursor(1, 0);
+          lcd.print("MAX TEMP:");
+          lcd.print(temp, DEC);
+          lcd.print(" C");
+          lcd.setCursor(1, 1);
+          lcd.print("TRANS.HOUR: ");
+          lcd.print(transition_hour);
+          lcd.setCursor(1, 2);
+          lcd.print("ESCAPE DIR: ");
 
-            if (sel == 0) {lcd.setCursor(0, 0); lcd.print(">");}
-            if (sel == 1) {lcd.setCursor(0, 1); lcd.print(">");}
-            if (sel == 2) {lcd.setCursor(0, 2); lcd.print(">");}
-            if (sel == 3) {lcd.setCursor(0, 3); lcd.print(">");}
+          if (escape_direction == 0){
+            lcd.print("NORMAL");
+          }
+
+          if (escape_direction == 1){
+            lcd.print("REVERSE");
+          }
+
+          lcd.setCursor(1, 3);
+          lcd.print("HISTERESIS: ");
+          lcd.print(temp_hist);
+          lcd.print(" C");
+
+          if (sel == 0) {lcd.setCursor(0, 0); lcd.print(">");}
+          if (sel == 1) {lcd.setCursor(0, 1); lcd.print(">");}
+          if (sel == 2) {lcd.setCursor(0, 2); lcd.print(">");}
+          if (sel == 3) {lcd.setCursor(0, 3); lcd.print(">");}
                 
         }
               
             
       }
-
+      timePosArray[34][2] = escape_direction;
+      timePosArray[31][0] = transition_hour;
       timePosArray[31][1] = temp;
+      timePosArray[30][2] = temp_hist;
       table_write();
 
   }
@@ -1202,12 +1249,24 @@ void loop() {
     int now_hour = hour();
 
     if (now_hour < transition_hour ) {
-      motor_spin(servo_max);
+      if (escape_direction == 0){
+        motor_spin(servo_max);
+      }
+      if (escape_direction == 1){
+        motor_spin(servo_min);
+      }
+      
     }
     else if (now_hour >= transition_hour) {
-      motor_spin(servo_min);
+      if (escape_direction == 0){
+        motor_spin(servo_min);
+      }
+      if (escape_direction == 1){
+        motor_spin(servo_max);
+      }
     }
   }
+  
 
   if (temperature < math_temp and work_mode != timePosArray[34][1]) {
     work_mode = timePosArray[34][1];
