@@ -69,7 +69,7 @@
   int setPos = 0;
   int old_setPos = 0;
   int eep_array=10;
-  byte steps_num = 0;
+  int steps_num = 0;
   uint16_t timePosArray[35][3];
 
   int old_sec = 0;
@@ -82,6 +82,7 @@
   int old_work_mode = 0;
 
   int work_mode = 0;       // data of work mode 0 stop, 1 time table, 2 full_auto
+  int transition_hour = 0;
   int azimuth_min = 0; 
   int azimuth_max = 0;
   int servo_min = 0;
@@ -93,33 +94,37 @@
 
 void setup() {
  Serial.begin(115200);
+
  //Lcd config
  lcd.begin(20, 4);                         
-
-  //only set the date+time one time
-  //rtc.set(0, 15, 22, 23, 07, 2019); //sec, min, hour, day, month, year
-  //rtc.start();
-  setSyncProvider(RTC.get);   // the function to get the time from the RTC
+// the function to get the time from the RTC
+  setSyncProvider(RTC.get);   
   if(timeStatus()!= timeSet) 
-     Serial.println("Unable to sync with the RTC");
+     lcd.clear();
+     lcd.setCursor(0,0);
+     lcd.print("Unable to sync with the RTC");
+     delay(2500);
   else
-     Serial.println("RTC has set the system time");      
+      lcd.clear();
+     lcd.setCursor(0,0);
+     lcd.print("RTC has set the system time");
+     delay(2500);     
   
   SolarPosition::setTimeProvider(RTC.get);
 
+  // Temperature sensor init
   sensors.begin();
- 
+  // I/O Configuration
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(potentiometer, INPUT);
   pinMode(3, INPUT);
   pinMode(4, INPUT);
-  //pinMode(sw, INPUT);
   pinMode(button, INPUT);
   pinMode(relay_1, OUTPUT);
   pinMode(relay_2, OUTPUT);
   pinMode(power, OUTPUT);
   pinMode(motor, OUTPUT);
-  
+  // Init Hbridge
   digitalWrite(LED_BUILTIN,1);
   digitalWrite(relay_1,1);
   digitalWrite(relay_2,1);
@@ -138,27 +143,23 @@ void setup() {
   delay(100);
 
   int eep_position=addressInt;
-  
+
+  //For EEPROM clear uncoment
   //for(int i=0; i<1024;i++){
   //EEPROM.write(i,0);
   //}
-
- for(int i=0; i<35;i++){
+  lcd.clear();
+  lcd.setCursor(5, 0);
+  lcd.print("EEPROM READ");
+  for(int i=0; i<35;i++){
    for(int j=0;j<3;j++){
     timePosArray[i][j] = EEPROM.readInt(eep_position);
     eep_position=eep_position+2;
-    lcd.clear();
-    lcd.setCursor(5, 0);
-    lcd.print("EEPROM READ");
-    lcd.setCursor(9, 2);
-    lcd.print(eep_position);
-    lcd.setCursor(9, 3);
-    lcd.print(timePosArray[i][j]);
     }
-
     delay(10);
-
   }
+  
+  transition_hour = timePosArray[31][0];
   temp = timePosArray[31][1];
   speed = timePosArray[32][2];
   brake =timePosArray[31][2];
@@ -868,22 +869,85 @@ void menu() {
 
   if (menu_count == 4){
       lcd.clear();
-      lcd.setCursor(5, 0);
+      lcd.setCursor(1, 0);
       lcd.print("MAX TEMP:");
-      lcd.setCursor(8, 2);
       lcd.print(temp, DEC);
       lcd.print(" C");
+      lcd.setCursor(1, 1);
+      lcd.print("TRANS.HOUR: ");
+      lcd.print(transition_hour);
+      
+      int new_time=0;
+      int sel=0; 
 
-      while (lklik == 0) {
-        button_check();
-        encoder = myEnc.read();
-        if (encoder != old_encoder){
-          if ( encoder > old_encoder) {temp=temp+1; old_encoder = encoder;}
-          if ( encoder < old_encoder) {temp=temp-1; old_encoder = encoder;} 
-          lcd.setCursor(8, 3);
-          lcd.print(temp, DEC);
-          lcd.print(" C");
-        }        
+      while (lklik==0) {
+          klik=0;
+          lklik=0;
+          button_check();
+          encoder = myEnc.read();
+          if (klik == 1) {sel++;}
+          if(sel >=4) {sel=0;}
+
+          if (sel == 0) {
+            new_time=temp;
+            }
+          if (sel == 1) {
+            new_time=transition_hour;
+            }
+          if (sel == 2) {
+            new_time=azimuth_min;
+            }
+          if (sel == 3) {
+            new_time=azimuth_max;
+            }
+          
+          if (encoder != old_encoder or klik == 1){
+            klik=0;
+            if ( encoder > old_encoder) {new_time=new_time+1; old_encoder = encoder;}
+            if ( encoder < old_encoder) {new_time=new_time-1; old_encoder = encoder;}
+            if (new_time < 0) {new_time = 0;}
+
+            if (sel == 0) {
+              if (new_time > 1000){new_time = 1000;}
+              servo_min = new_time;
+              }
+            if (sel == 1) {
+              if (new_time < 500){new_time = 500;}
+              if (new_time > 1000){new_time = 1000;}
+              servo_max = new_time;
+              }
+            if (sel == 2) {
+              if (new_time > 255){new_time = 255;}
+              azimuth_min = new_time;
+              }
+            if (sel == 3) {
+              if (new_time > 510){new_time = 510;}
+              if (new_time < 155){new_time = 155;}
+              azimuth_max  = new_time;
+              }
+      
+            lcd.clear();
+            lcd.setCursor(1, 0);
+            lcd.print("Servo_min: ");
+            lcd.print(servo_min);
+            lcd.setCursor(1, 1);
+            lcd.print("Servo_max: ");
+            lcd.print(servo_max);
+            lcd.setCursor(1, 2);
+            lcd.print("Az_min: ");
+            lcd.print(azimuth_min);
+            lcd.setCursor(1, 3);
+            lcd.print("Az_max: ");
+            lcd.print(azimuth_max);
+
+            if (sel == 0) {lcd.setCursor(0, 0); lcd.print(">");}
+            if (sel == 1) {lcd.setCursor(0, 1); lcd.print(">");}
+            if (sel == 2) {lcd.setCursor(0, 2); lcd.print(">");}
+            if (sel == 3) {lcd.setCursor(0, 3); lcd.print(">");}
+                
+        }
+              
+            
       }
 
       timePosArray[31][1] = temp;
@@ -893,7 +957,7 @@ void menu() {
 
   if (menu_count == 5){
 
-      int work_menu = timePosArray[34][1];
+    int work_menu = timePosArray[34][1];
       lcd.clear();
       lcd.setCursor(5, 0);
       lcd.print("Work mode: ");
@@ -911,46 +975,61 @@ void menu() {
           lcd.setCursor(8, 2);
           lcd.print("AUTO");
         break;
-      }
-      while (lklik==0) {
-          klik=0;
-          lklik=0;
-          button_check();
-          encoder = myEnc.read();
+    }
+
+    klik=0;
+    lklik=0;
+    while (lklik==0) {
+      button_check();
+      encoder = myEnc.read();
           
-          if (encoder != old_encoder or klik == 1){
-            klik=0;
-            if ( encoder > old_encoder) {work_menu=work_menu+1; old_encoder = encoder;}
-            if ( encoder < old_encoder) {work_menu=work_menu-1; old_encoder = encoder;}
-            if ( work_menu < 0) { work_menu = 0;}
-            if ( work_menu > 2) { work_menu = 2;}
+      if (encoder != old_encoder or klik == 1){
+        klik=0;
+
+        if ( encoder > old_encoder) {
+          work_menu=work_menu+1; 
+          old_encoder = encoder;
+        }
+        if ( encoder < old_encoder) {
+          work_menu=work_menu-1; 
+          old_encoder = encoder;
+        }
+
+        if ( work_menu < 0) {
+          work_menu = 0;
+        }
+
+        if ( work_menu > 2) {
+          work_menu = 2;
+        }
               
-            lcd.clear();
-            lcd.setCursor(5, 0);
-            lcd.print("Work mode: ");
+        lcd.clear();
+        lcd.setCursor(5, 0);
+        lcd.print("Work mode: ");
       
-            switch (work_menu){
-              case 0:
-              lcd.setCursor(8, 2);
-              lcd.print("STOP");
-            break;
-            case 1:
-              lcd.setCursor(5, 2);
-              lcd.print("TIME TABLE");
-            break;
-            case 2:
-              lcd.setCursor(8, 2);
-              lcd.print("AUTO");
-            break;
-            }
+        switch (work_menu){
+          case 0:
+            lcd.setCursor(8, 2);
+            lcd.print("STOP");
+          break;
+          case 1:
+            lcd.setCursor(5, 2);
+            lcd.print("TIME TABLE");
+          break;
+          case 2:
+            lcd.setCursor(8, 2);
+            lcd.print("AUTO");
+          break;
+        }
+
+      }       
             
-                
-          }       
-            
-      }
+    }
+
     timePosArray[34][1] = work_menu;
     work_mode = work_menu;
     table_write();
+
   } 
  
 
@@ -977,44 +1056,71 @@ void menu() {
           lklik=0;
           button_check();
           encoder = myEnc.read();
-          if (klik == 1) {sel++;}
-          if(sel >=4) {sel=0;}
+          if (klik == 1) {
+            sel++;
+          }
+
+          if(sel >=4) {
+            sel=0;
+          }
 
           if (sel == 0) {
             new_time=speed;
             }
+
           if (sel == 1) {
             new_time=brake_speed;
             }
+
           if (sel == 2) {
             new_time=servo_histereza;
             }
+
           if (sel == 3) {
             new_time=brake;
             }
           
           if (encoder != old_encoder or klik == 1){
+
             klik=0;
-            if ( encoder > old_encoder) {new_time=new_time+1; old_encoder = encoder;}
-            if ( encoder < old_encoder) {new_time=new_time-1; old_encoder = encoder;}
-            if (new_time < 0) {new_time = 0;}
+            if ( encoder > old_encoder) {
+              new_time=new_time+1; 
+              old_encoder = encoder;
+            }
+            if ( encoder < old_encoder) {
+              new_time=new_time-1; 
+              old_encoder = encoder;
+            }
+            if (new_time < 0) {
+              new_time = 0;
+            }
 
             if (sel == 0) {
-              if (new_time > 255){new_time = 255;}
+              if (new_time > 255){
+                new_time = 255;
+              }
               speed = new_time;
-              }
+            }
             if (sel == 1) {
-              if (new_time > 255){new_time = 255;}
+              if (new_time > 255){
+                new_time = 255;
+              }
               brake_speed = new_time;
-              }
+            }
             if (sel == 2) {
-              if (new_time > 25){new_time = 25;}
+              if (new_time > 25){
+                new_time = 25;
+              }
               servo_histereza = new_time;
-              }
+            }
             if (sel == 3) {
-              if (new_time > 50){new_time = 50;}
-              brake  = new_time;
+              if (new_time > 50){
+                new_time = 50;
               }
+
+              brake  = new_time;
+
+            }
       
             lcd.clear();
             lcd.setCursor(1, 0);
@@ -1030,10 +1136,22 @@ void menu() {
             lcd.print("Brake D: ");
             lcd.print(brake);
 
-            if (sel == 0) {lcd.setCursor(0, 0); lcd.print(">");}
-            if (sel == 1) {lcd.setCursor(0, 1); lcd.print(">");}
-            if (sel == 2) {lcd.setCursor(0, 2); lcd.print(">");}
-            if (sel == 3) {lcd.setCursor(0, 3); lcd.print(">");}
+            if (sel == 0) {
+              lcd.setCursor(0, 0); 
+              lcd.print(">");
+            }
+            if (sel == 1) {
+              lcd.setCursor(0, 1); 
+              lcd.print(">");
+            }
+            if (sel == 2) {
+              lcd.setCursor(0, 2); 
+              lcd.print(">");
+            }
+            if (sel == 3) {
+              lcd.setCursor(0, 3); 
+              lcd.print(">");
+            }
                 
         }
               
@@ -1076,23 +1194,17 @@ void loop() {
   // Reads the temperature from sensor
   temperature = sensors.readTemperature(sensorAddress);
 
-  
-
+  // Thermostat function independent from work mode with escape strategy defined by user
   float math_temp = temp;
-  
-
   if (temperature >= math_temp){
 
-    Serial.println (math_temp);
-    Serial.println (temperature);
-
     work_mode = 0;
-
     int now_hour = hour();
-    if (now_hour < 13 ) {
+
+    if (now_hour < transition_hour ) {
       motor_spin(servo_max);
     }
-    else if (now_hour >= 13) {
+    else if (now_hour >= transition_hour) {
       motor_spin(servo_min);
     }
   }
@@ -1126,8 +1238,6 @@ void loop() {
         old_automatic_mode = automatic_mode;
       }
   }
-  
-  
   
   // Reads encoder
   encoder = myEnc.read();
