@@ -5,5 +5,9 @@
     },
     "githubPullRequests.remotes": [
         "origin"
-    ]
+    ],
+    "terminal.integrated.env.windows": {
+        "PATH": "C:\\Users\\D8vit\\.platformio\\penv\\Scripts;C:\\Users\\D8vit\\.platformio\\penv;C:\\ProgramData\\Oracle\\Java\\javapath;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files\\PuTTY\\;C:\\Program Files\\Intel\\DMIX;C:\\Program Files\\OpenVPN\\bin;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\ffmpeg\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files (x86)\\Atmel\\Flip 3.4.7\\bin;C:\\Users\\D8vit\\AppData\\Local\\Programs\\Microsoft VS Code\\bin;C:\\Users\\D8vit\\AppData\\Local\\GitHubDesktop\\bin;C:\\ProgramData\\Oracle\\Java\\javapath;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files\\PuTTY\\;C:\\Program Files\\Intel\\DMIX;C:\\Program Files\\OpenVPN\\bin;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\ffmpeg\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files (x86)\\Atmel\\Flip 3.4.7\\bin;C:\\Users\\D8vit\\AppData\\Local\\Programs\\Microsoft VS Code\\bin;C:\\Users\\D8vit\\AppData\\Local\\GitHubDesktop\\bin",
+        "PLATFORMIO_CALLER": "vscode"
+    }
 }

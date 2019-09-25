@@ -199,9 +199,9 @@ void table_write()
 //**********************************************TABLE_MODE^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 int table_mode() 
 { 
-  int tableTimePosArray[30][3];
+  int tableTimePosArray[25][3];
   int eep_position = 120;
-  for(int i=0; i<30;i++){
+  for(int i=0; i<25;i++){
    for(int j=0;j<3;j++){
     tableTimePosArray[i][j] = timePosArray[i][j];
     eep_position++;
@@ -222,7 +222,7 @@ int table_mode()
       table_convert_time = timeToProces - table_convert_time;
       table_convert_time = abs (table_convert_time);
 
-      if (tableTimePosArray[i][0] == 0 and tableTimePosArray[i][1] == 0 and timePosArray[i][2] == 0){
+      if (tableTimePosArray[i][0] == 0 && tableTimePosArray[i][1] == 0 && timePosArray[i][2] == 0){
       i = 19;
       }
       if (table_convert_time < oldtable_convert_time) {
@@ -288,18 +288,18 @@ void motor_spin(int demandPosition){
       lcd.setCursor(12, 3);
       lcd.print(demandPosition, DEC);
 
-      if (dir == 0 and pot <= demandPosition + brake ){
+      if (dir == 0 && pot <= demandPosition + brake ){
         analogWrite(motor, brake_speed);
       }
-      if (dir == 1 and pot >= demandPosition - brake){
+      if (dir == 1 && pot >= demandPosition - brake){
         analogWrite(motor, brake_speed);
       }
       
-      if (dir == 0 and pot <= demandPosition ){
+      if (dir == 0 && pot <= demandPosition ){
         work = 0;
 
       }
-      if (dir == 1 and pot >= demandPosition ){
+      if (dir == 1 && pot >= demandPosition ){
         work = 0;
       }
     
@@ -433,7 +433,8 @@ void menu() {
   lcd.setCursor(15, 2);
   lcd.print("SERVO");
   lcd.setCursor(2, 3);
-  lcd.print("ADVENCED"); 
+  lcd.print("ADVENCED");
+  lcd.setCursor(0, 0); 
   lcd.print(">");
   encoder = myEnc.read();
   long old_encoder = encoder;
@@ -449,9 +450,10 @@ void menu() {
     button_check();
     encoder = myEnc.read();
 
-    if (encoder != old_encoder){
+    if (4 <= abs(encoder - old_encoder)){
       if ( encoder > old_encoder) {menu_count++; old_encoder = encoder;}
       if ( encoder < old_encoder) {menu_count--; old_encoder = encoder;}
+
         if ( menu_count < 0) {menu_count = 0;}
         if ( menu_count > 6) {menu_count = 6;}
 
@@ -523,7 +525,7 @@ void menu() {
       lklik=0;
 
       lcd.clear();
-      lcd.setCursor(3, 0);
+      lcd.setCursor(1, 0);
       lcd.print("WORK SCHEDULE");
       lcd.setCursor(2, 1);
       lcd.print("STEP: ");
@@ -551,14 +553,14 @@ void menu() {
           if (sel == 3) {new_time=timePosArray[step][1];}
           if (sel == 4) {new_time=timePosArray[step][2];}
 
-          if (encoder != old_encoder or klik == 1){
+          if ((2 <= abs(encoder - old_encoder)) || klik == 1){
             klik=0;
             if ( encoder > old_encoder) {new_time=new_time+1; old_encoder = encoder;}
             if ( encoder < old_encoder) {new_time=new_time-1; old_encoder = encoder;}
             if (new_time < 0) {new_time = 0;}
 
             if (sel == 0) {
-              if (new_time > 30){new_time = 30;}
+              if (new_time > 25){new_time = 25;}
               step=new_time;
               }
             if (sel == 1) {
@@ -670,7 +672,7 @@ void menu() {
             }
           if (sel == 5) {new_time=new_year;}
 
-          if (encoder != old_encoder or klik == 1){
+          if ((2 <= abs(encoder - old_encoder)) || klik == 1){
             klik=0;
             if ( encoder > old_encoder) {new_time=new_time+1; old_encoder = encoder;}
             if ( encoder < old_encoder) {new_time=new_time-1; old_encoder = encoder;}
@@ -738,21 +740,24 @@ void menu() {
     if (menu_count == 2){   
       int new_motor = analogRead(potentiometer);   
       lcd.clear();
-      lcd.setCursor(3, 0);
+      lcd.setCursor(1, 0);
       lcd.print("ACTUAL POSITION:");
-      lcd.setCursor(10, 1);
+      lcd.setCursor(7, 1);
       lcd.print(new_motor, DEC);
-      lcd.setCursor(3, 2);
+      lcd.setCursor(1, 2);
       lcd.print("DEMAND POSITION:");
+      lcd.setCursor(7, 3);
       lcd.print(new_motor, DEC);
 
       while (lklik == 0) {
         button_check();
         encoder = myEnc.read();
         if (encoder != old_encoder){
-          if ( encoder > old_encoder) {new_motor=new_motor+1; old_encoder = encoder;}
-          if ( encoder < old_encoder) {new_motor=new_motor-1; old_encoder = encoder;} 
-          lcd.setCursor(8, 3);
+          if ( encoder > old_encoder) {new_motor=new_motor+5; old_encoder = encoder;}
+          if ( encoder < old_encoder) {new_motor=new_motor-5; old_encoder = encoder;} 
+          if (new_motor > 1020) {new_motor = 1020;}
+          if (new_motor < 0 ) {new_motor = 0;}
+          lcd.setCursor(7, 3);
           lcd.print(new_motor, DEC);
         }
         if (klik == 1){
@@ -760,11 +765,11 @@ void menu() {
           klik = 0;
           int new_motor = analogRead(potentiometer);   
           lcd.clear();
-          lcd.setCursor(3, 0);
+          lcd.setCursor(1, 0);
           lcd.print("ACTUAL POSITION:");
-          lcd.setCursor(10, 1);
+          lcd.setCursor(7, 1);
           lcd.print(new_motor, DEC);
-          lcd.setCursor(3, 2);
+          lcd.setCursor(1, 2);
           lcd.print("DEMAND POSITION:");
         }       
       }
@@ -814,7 +819,7 @@ void menu() {
             new_time=azimuth_max;
             }
           
-          if (encoder != old_encoder or klik == 1){
+          if ((2 <= abs(encoder - old_encoder)) || klik == 1){
             klik=0;
             if ( encoder > old_encoder) {new_time=new_time+1; old_encoder = encoder;}
             if ( encoder < old_encoder) {new_time=new_time-1; old_encoder = encoder;}
@@ -920,7 +925,7 @@ void menu() {
             new_time=temp_hist;
             }
           
-          if (encoder != old_encoder or klik == 1){
+          if ((2 <= abs(encoder - old_encoder)) || klik == 1){
             klik=0;
 
             if ( encoder > old_encoder) {
@@ -1030,7 +1035,7 @@ void menu() {
       button_check();
       encoder = myEnc.read();
           
-      if (encoder != old_encoder or klik == 1){
+      if ((2 <= abs(encoder - old_encoder)) || klik == 1){
         klik=0;
 
         if ( encoder > old_encoder) {
@@ -1127,7 +1132,7 @@ void menu() {
             new_time=brake;
             }
           
-          if (encoder != old_encoder or klik == 1){
+          if ((2 <= abs(encoder - old_encoder)) || klik == 1){
 
             klik=0;
             if ( encoder > old_encoder) {
@@ -1267,8 +1272,8 @@ void loop() {
     }
   }
   
-
-  if (temperature < math_temp and work_mode != timePosArray[34][1]) {
+  math_temp = math_temp - temp_hist;
+  if (temperature < math_temp && work_mode != timePosArray[34][1]) {
     work_mode = timePosArray[34][1];
   }
 
