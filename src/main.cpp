@@ -242,13 +242,13 @@ int table_mode()
 /********************************************MOTOR SPIN*******************************************************/
 
 void motor_spin(int demandPosition){
-  
   digitalWrite(relay_1,1);
   digitalWrite(relay_2,1);
   digitalWrite(motor, 1);
   boolean work = 0;
   
     pot = analogRead(potentiometer);
+    int old_pot = pot;
     int histereza = demandPosition - pot;
     histereza = abs (histereza);
   if (histereza >= servo_histereza){
@@ -280,8 +280,11 @@ void motor_spin(int demandPosition){
     
     analogWrite(motor, speed);
     
+    int work_sec = second();
+    int old_work_sec = work_sec;
+    int failsafe_counter = 0 ;
     while (work == 1) {
-      
+      work_sec = second();
       int pot = analogRead(potentiometer);
       lcd.setCursor(12, 2);
       lcd.print(pot, DEC);
@@ -302,7 +305,35 @@ void motor_spin(int demandPosition){
       if (dir == 1 && pot >= demandPosition ){
         work = 0;
       }
-    
+
+      // Motor failsafe procedure for not changing pos in hardcoded time 15 sec
+      if (work_sec != old_work_sec){
+        old_work_sec = work_sec;
+        int failsafe_math = abs (pot - old_pot);
+        Serial.print(failsafe_math);
+        if (failsafe_math <= 1){
+          failsafe_counter++;
+          Serial.println("fail!!!");
+        }
+        old_pot = pot;
+      }
+      if (failsafe_counter >= 15) {
+
+        pot = analogRead(potentiometer);
+        LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+        lcd.begin(20, 4); 
+        lcd.clear();
+        lcd.setCursor(1, 0);
+        lcd.print("FAILSAFE !!!");
+        digitalWrite(power, 0);
+        klik = 0;
+        while (klik == 0) {
+          if (digitalRead(button) == LOW) {
+            klik = 1;
+          }
+        }
+        work = 0;
+      }
     }
     digitalWrite(motor, 1);
     delay(250);
