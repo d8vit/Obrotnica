@@ -39,7 +39,8 @@
                 "C:/Users/D8vit/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/SPI/src",
                 "C:/Users/D8vit/.platformio/packages/framework-arduinoavr/libraries/__cores__/arduino/SoftwareSerial/src",
                 "C:/Users/D8vit/.platformio/packages/tool-unity",
-                ""
+                "",
+                "${workspaceFolder}/lib/BigFont"
             ],
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,

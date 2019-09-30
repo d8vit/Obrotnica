@@ -47,7 +47,7 @@ boolean buttonActive = false;
 boolean longPressActive = false;
 long buttonTimer = 0;
 unsigned long longPressTime = 850;
-int button = 5;
+unsigned int button = 5;
 boolean klik = 0;
 boolean lklik = 0;
 boolean state = 0;
@@ -193,23 +193,14 @@ void table_write()
     }
   }
   lcd.clear();
-  lcd.setCursor(0, 0);
+  lcd.setCursor(4, 0);
   lcd.print("EEPROM SAVED");
   delay(1500);
 }
 //**********************************************TABLE_MODE^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^/
 int table_mode()
 {
-  int tableTimePosArray[25][3];
-  int eep_position = 120;
-  for (int i = 0; i < 25; i++)
-  {
-    for (int j = 0; j < 3; j++)
-    {
-      tableTimePosArray[i][j] = timePosArray[i][j];
-      eep_position++;
-    }
-  }
+
   int now_min = minute();
   int now_hour = hour();
   int timeToProces = (now_hour * 100) + now_min;
@@ -219,18 +210,23 @@ int table_mode()
   for (int i = 0; i < 18; i++)
   {
 
-    int table_convert_time = (tableTimePosArray[i][1] * 100) + timePosArray[i][2];
+    int table_convert_time = (timePosArray[i][1] * 100) + timePosArray[i][2];
 
+    //table_convert_time = timeToProces - table_convert_time;
+    //table_convert_time = abs(table_convert_time);
     table_convert_time = timeToProces - table_convert_time;
-    table_convert_time = abs(table_convert_time);
+    if (table_convert_time <0){
+      table_convert_time = 9999;
+    }
+    
 
-    if (tableTimePosArray[i][0] == 0 && tableTimePosArray[i][1] == 0 && timePosArray[i][2] == 0)
+    if (timePosArray[i][0] == 0 && timePosArray[i][1] == 0 && timePosArray[i][2] == 0)
     {
       i = 19;
     }
     if (table_convert_time < oldtable_convert_time)
     {
-      result = tableTimePosArray[i][0];
+      result = timePosArray[i][0];
       oldtable_convert_time = table_convert_time;
     }
   }
@@ -238,6 +234,41 @@ int table_mode()
   return result;
 }
 
+/****************************************************************BUTTON_CHECK***************************************/
+void button_check()
+{
+  if (digitalRead(button) == LOW)
+  {
+    if (buttonActive == false)
+    {
+
+      buttonActive = true;
+      buttonTimer = millis();
+    }
+
+    if ((millis() - buttonTimer > longPressTime) && (longPressActive == false))
+    {
+
+      longPressActive = true;
+      lklik = !lklik;
+    }
+  }
+  else
+  {
+    if (buttonActive == true)
+    {
+      if (longPressActive == true)
+      {
+        longPressActive = false;
+      }
+      else
+      {
+        klik = !klik;
+      }
+      buttonActive = false;
+    }
+  }
+}
 /********************************************MOTOR SPIN*******************************************************/
 
 void motor_spin(int demandPosition)
@@ -274,25 +305,42 @@ void motor_spin(int demandPosition)
     lcd.clear();
     lcd.setCursor(1, 0);
     lcd.print("MOTOR DIRECTION: ");
-    lcd.print(dir);
+    lcd.setCursor(8, 1);
+
+    if (dir == 0)
+    {
+      lcd.print("NORM");
+    }
+
+    if (dir == 1)
+    {
+      lcd.print("REV");
+    }
     lcd.setCursor(1, 2);
     lcd.print("CURRENT:");
     lcd.setCursor(1, 3);
     lcd.print("DESIRABLE:");
 
-    analogWrite(motor, speed);
-
     int work_sec = second();
     int old_work_sec = work_sec;
     int failsafe_counter = 0;
+    analogWrite(motor, speed);
+    button_check();
     while (work == 1)
     {
+      if (lklik == 1)
+      {
+        work = 0;
+      }
+      button_check();
       work_sec = second();
       int pot = analogRead(potentiometer);
       lcd.setCursor(12, 2);
       lcd.print(pot, DEC);
+      lcd.print("  ");
       lcd.setCursor(12, 3);
       lcd.print(demandPosition, DEC);
+      lcd.print("  ");
 
       if (dir == 0 && pot <= demandPosition + brake)
       {
@@ -362,42 +410,6 @@ void motor_spin(int demandPosition)
   pot = +analogRead(potentiometer);
 }
 
-/****************************************************************BUTTON_CHECK***************************************/
-void button_check()
-{
-  if (digitalRead(button) == LOW)
-  {
-    if (buttonActive == false)
-    {
-
-      buttonActive = true;
-      buttonTimer = millis();
-    }
-
-    if ((millis() - buttonTimer > longPressTime) && (longPressActive == false))
-    {
-
-      longPressActive = true;
-      lklik = !lklik;
-    }
-  }
-  else
-  {
-    if (buttonActive == true)
-    {
-      if (longPressActive == true)
-      {
-        longPressActive = false;
-      }
-      else
-      {
-        klik = !klik;
-      }
-      buttonActive = false;
-    }
-  }
-}
-
 /****************************************************LCD_REFRESH**********************************/
 
 void lcd_refresh(int potValue, float temp, long encoderValue, long azimuth, int elevation, int tpos)
@@ -423,10 +435,10 @@ void lcd_refresh(int potValue, float temp, long encoderValue, long azimuth, int 
   lcd.setCursor(13, 0);
   lcd.print(temp);
   lcd.print(" C");
-  lcd.setCursor(0, 1);
+  lcd.setCursor(1, 1);
   lcd.print("Servo: ");
   lcd.print(potValue);
-  lcd.setCursor(0, 2);
+  lcd.setCursor(1, 2);
   lcd.print("MODE: ");
 
   switch (work_mode)
@@ -442,12 +454,10 @@ void lcd_refresh(int potValue, float temp, long encoderValue, long azimuth, int 
     break;
   }
 
-  lcd.setCursor(0, 3);
-  lcd.print("AZ: ");
+  lcd.setCursor(1, 3);
+  lcd.print("AZIMUTH: ");
   lcd.print(azimuth);
   lcd.setCursor(12, 3);
-  lcd.print("EL: ");
-  lcd.print(elevation);
 }
 
 /*****************************************************   MENU   ************************************************************/
@@ -455,6 +465,8 @@ void lcd_refresh(int potValue, float temp, long encoderValue, long azimuth, int 
 void menu()
 {
   lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(">");
   lcd.setCursor(2, 0);
   lcd.print("SET STEPS");
   lcd.setCursor(15, 0);
@@ -469,8 +481,8 @@ void menu()
   lcd.print("SERVO");
   lcd.setCursor(2, 3);
   lcd.print("ADVENCED");
-  lcd.setCursor(0, 0);
-  lcd.print(">");
+  lcd.setCursor(15, 3);
+  lcd.print("EXIT");
 
   encoder = myEnc.read();
   long old_encoder = encoder;
@@ -483,7 +495,6 @@ void menu()
 
   while (klik == 0)
   {
-
     button_check();
     encoder = myEnc.read();
 
@@ -502,11 +513,11 @@ void menu()
 
       if (menu_count < 0)
       {
-        menu_count = 0;
+        menu_count = 7;
       }
-      if (menu_count > 6)
+      if (menu_count > 7)
       {
-        menu_count = 6;
+        menu_count = 0;
       }
 
       lcd.clear();
@@ -524,6 +535,8 @@ void menu()
       lcd.print("SERVO");
       lcd.setCursor(2, 3);
       lcd.print("ADVENCED");
+      lcd.setCursor(15, 3);
+      lcd.print("EXIT");
 
       switch (menu_count)
       {
@@ -559,6 +572,10 @@ void menu()
 
       case 6:
         lcd.setCursor(13, 2);
+        lcd.print(">");
+        break;
+      case 7:
+        lcd.setCursor(13, 3);
         lcd.print(">");
         break;
       }
@@ -981,8 +998,10 @@ void menu()
         {
           new_motor = 0;
         }
+
         lcd.setCursor(7, 3);
         lcd.print(new_motor, DEC);
+        lcd.print("  ");
       }
       if (klik == 1)
       {
@@ -1562,6 +1581,9 @@ void menu()
     table_write();
   }
 
+  if (menu_count == 0)
+  {
+  }
   klik = 0;
   lklik = 0;
 }
